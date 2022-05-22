@@ -2,14 +2,15 @@ import { GetStaticPropsContext } from "next";
 import Head from "next/head";
 import { serialize } from "next-mdx-remote/serialize";
 import { MDXRemote, MDXRemoteSerializeResult } from "next-mdx-remote";
-import { andThen, apply, map, pipe } from "ramda";
+import { andThen, map, pipe } from "ramda";
 import { assert } from "@sindresorhus/is";
 import Container from "components/container";
 import Layout from "components/layout";
-import { FS, Path } from "lib/utils";
+import SelectLang from "components/select-lang";
+import { FS, Path, head } from "lib/utils";
 
 const ROOT = "posts";
-const EXT = ".md";
+const EXT = ".{md,mdx}";
 const PATTERN = Path.format({
   name: `${ROOT}/**/*`,
   ext: EXT,
@@ -34,21 +35,21 @@ export const getStaticPaths = () =>
     }));
 
 const parse = (source: string) => serialize(source, { parseFrontmatter: true });
-const check = (ctx: GetStaticPropsContext) => {
+const check = async (ctx: GetStaticPropsContext) => {
   assert.string(ctx.params?.slug);
   assert.string(ctx.locale);
-  return [ROOT, ctx.locale, ctx.params.slug];
-};
-const FullFilePath = (name: string) =>
-  Path.format({
-    name,
+
+  return Path.format({
+    name: Path.join(ROOT, ctx.locale, ctx.params.slug),
     ext: EXT,
   });
+};
 export const getStaticProps = pipe(
   check,
-  apply(Path.join),
-  FullFilePath,
-  FS.readFile,
+  andThen(FS.glob),
+  andThen(head),
+  andThen(Path.format),
+  andThen(FS.readFile),
   andThen(parse),
   andThen((source) => ({
     props: { source },
@@ -57,6 +58,7 @@ export const getStaticProps = pipe(
 
 interface Meta {
   title?: string;
+  description?: string;
 }
 const meta = (data: any): Meta => data;
 
@@ -65,11 +67,21 @@ type Props = {
 };
 const Page = ({ source }: Props) => (
   <Layout>
-    <Container className="prose">
+    <Container>
       <Head>
         <title>{meta(source.frontmatter)?.title}</title>
+
+        {meta(source.frontmatter)?.description && (
+          <meta
+            name="description"
+            content={meta(source.frontmatter).description}
+          />
+        )}
       </Head>
-      <MDXRemote {...source} />
+
+      <article className="prose prose-h1:text-green-500">
+        <MDXRemote {...source} components={{ SelectLang }} />
+      </article>
     </Container>
   </Layout>
 );

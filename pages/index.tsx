@@ -7,7 +7,7 @@ import { evolve, map, pipe } from "ramda";
 
 export const getStaticProps: GetStaticProps = async () => ({
   props: {
-    posts: await FS.glob("posts/**/*.md").then(
+    posts: await FS.glob("posts/**/*.{md,mdx}").then(
       map(
         pipe(
           evolve({

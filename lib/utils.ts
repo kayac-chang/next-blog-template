@@ -4,6 +4,7 @@ import path from "path";
 import { curry, map, tap } from "ramda";
 
 export const trace = tap(console.log);
+export const head = <T>(values: T[]) => values[0];
 
 export const Path = {
   ...path,
